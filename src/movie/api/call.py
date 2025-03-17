@@ -44,3 +44,11 @@ def save_df(df: pd.DataFrame, base_path : str ):
     df.to_parquet(base_path,partition_cols=['dt'])
     save_path = f"{base_path}/dt={df['dt'][0]}"
     return save_path
+
+
+def list2df_check_num():
+    a= call_api("20250316",url_param={})
+    dfa=pd.DataFrame(a)
+    num_col=["rnum","rank","rankInten","movieCd","salesAmt","salesShare","salesInten","salesChange","salesAcc","audiCnt","audiInten","audiChange","audiAcc","scrnCnt","showCnt"]
+    dfs=dfa[num_col].apply(pd.to_numeric)
+    return dfs

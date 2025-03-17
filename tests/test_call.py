@@ -1,11 +1,12 @@
-from movie.api.call import gen_url,call_api,list2df,save_df
+from movie.api.call import gen_url,call_api,list2df,save_df,list2df_check_num
 import os
 import requests
 import pandas as pd
 
+
+
 def test_gen_url():
     r = gen_url()
-    print(r)
     assert "kobis" in r
     assert "targetDt" in r
     assert os.getenv("MOVIE_KEY") in r
@@ -43,4 +44,16 @@ def test_save_df():
     read_df = pd.read_parquet(r)
     assert 'dt' not in read_df.columns
     assert 'dt' in pd.read_parquet(base_path).columns
-    
+ 
+ 
+def test_list2df_check_num():
+    #from pandas.api.types import is_numeric_dtype
+    # a=list2df_check_num()
+    # print(a)
+    # for i in a.columns:
+    #     assert is_numeric_dtype(a[i])
+    # 위 아래 2가지 방법 있음
+    a= list2df_check_num()
+    num_col=["rnum","rank","rankInten","movieCd","salesAmt","salesShare","salesInten","salesChange","salesAcc","audiCnt","audiInten","audiChange","audiAcc","scrnCnt","showCnt"]
+    for i in num_col:
+        assert a[i].dtype in ['int','float64'], f"{i}가  숫자가 아님"
