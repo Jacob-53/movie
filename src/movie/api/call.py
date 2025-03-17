@@ -26,11 +26,11 @@ def call_api(dt="20120101",url_param={}):
         return f"API 요청실패{e}"
     
     
-def list2df(data:list, date: str,url_params={}):
+def list2df(data:list, date: str,url_param={}):
     df= pd.DataFrame(data)
     df["dt"]=date
     #df["multiMovieYn"]="Y"
-    for k,v in url_params.items():
+    for k,v in url_param.items():
         df[k] = v
         
     num_col=["rnum","rank","rankInten","movieCd","salesAmt","salesShare","salesInten","salesChange","salesAcc","audiCnt","audiInten","audiChange","audiAcc","scrnCnt","showCnt"]
@@ -38,21 +38,23 @@ def list2df(data:list, date: str,url_params={}):
        
     return df
 
-def save_df(df: pd.DataFrame, base_path : str,partitions=['dt'],url_params={}):
-    df.to_parquet(base_path,partition_cols=partitions)
-    save_path = f"{base_path}"
+def save_df(df: pd.DataFrame, base_path : str,partitions=['dt'],url_param={}):
     
+    save_path = f"{base_path}"
+    df.to_parquet(save_path,partition_cols=partitions)
     for i in partitions:
         save_path= save_path + f"/{i}={df[i][0]}"
     
     partition=[]
-    for v in url_params.values():
+    for v in url_param.values():
         for i in v.items():
             partition.append(i)
     
     for k, v in partition:
         save_path=save_path+f"/{k}={v}"
+    df.to_parquet(save_path,partition_cols=partitions)
     return save_path
+
   # if not os.path.exists(path): 
     #     os.makedirs(path)
     #     print(f"폴더 생성됨: {path}")
