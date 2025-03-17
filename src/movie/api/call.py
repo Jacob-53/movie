@@ -31,7 +31,7 @@ def list2df(data:list, date: str):
     df["dt"]=date   
     return df
 
-def save_df(df: pd.DataFrame, base_path : str ):
+def save_df(df: pd.DataFrame, base_path : str,partition=['dt']):
     # if not os.path.exists(path): 
     #     os.makedirs(path)
     #     print(f"폴더 생성됨: {path}")
@@ -41,7 +41,7 @@ def save_df(df: pd.DataFrame, base_path : str ):
     # sdf=data.to_csv(f"{path}/df.csv",index=False)
     
     # return sdf
-    df.to_parquet(base_path,partition_cols=['dt'])
+    df.to_parquet(base_path,partition_cols=partition)
     save_path = f"{base_path}/dt={df['dt'][0]}"
     return save_path
 

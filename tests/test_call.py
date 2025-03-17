@@ -57,3 +57,12 @@ def test_list2df_check_num():
     num_col=["rnum","rank","rankInten","movieCd","salesAmt","salesShare","salesInten","salesChange","salesAcc","audiCnt","audiInten","audiChange","audiAcc","scrnCnt","showCnt"]
     for i in num_col:
         assert a[i].dtype in ['int','float64'], f"{i}가  숫자가 아님"
+        
+def test_common_get_data(ds_nodash="20240101",url_param={},BASE_DIR= str,partition=['dt']):
+    from movie.api.call import gen_url,call_api,list2df,save_df,list2df_check_num
+    import os
+    url_param={"url_param":{"multiMovieYn":"Y"}}
+    data=call_api(ds_nodash,url_param)
+    df=list2df(data,ds_nodash)
+    sv=save_df(df,"~/data/movies/dailyboxoffice",partition=['dt'])
+    assert os.path.expanduser("~/data/movies/dailyboxoffice/dt=20240101")
