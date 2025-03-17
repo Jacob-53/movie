@@ -46,7 +46,7 @@ def save_df(df: pd.DataFrame, base_path : str,partitions=['dt'],url_param={}):
     
     for k, v in url_param.items():
         save_path=save_path+f"/{k}={v}"
-    df.to_parquet(base_path,partition_cols=partitions)
+    df.to_parquet(save_path,partition_cols=partitions)
     return save_path
 
   # if not os.path.exists(path): 
