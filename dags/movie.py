@@ -7,7 +7,7 @@ from airflow.operators.python import (
         PythonVirtualenvOperator,
 )
 from airflow.utils.trigger_rule import TriggerRule
-
+import os
 
 
 with DAG(
@@ -26,11 +26,12 @@ with DAG(
     catchup=True,
     tags=['api', 'movie'],
 ) as dag:
-    REQUIREMENTS =["git+https://github.com/Jacob-53/movie.git@0.1.0"]
-    BASE_DIR = "~/data/movies/dailyboxoffice"
+    REQUIREMENTS =["git+https://github.com/Jacob-53/movie.git@0.2.0"]
+    BASE_DIR = "/home/jacob/data/movies/dailyboxoffice"
 
     def branch_fun(ds_nodash):
         import os
+        check_path =os.path.expanduser(f"{BASE_DIR}/dt={ds_nodash}")
         if os.path.exists(f"{BASE_DIR}/dt={ds_nodash}"):
             return rm_dir.task_id
         else:
@@ -53,20 +54,19 @@ with DAG(
         requirements=REQUIREMENTS,
     )
 
-    def common_get_data(ds_nodash= str ,url_param={},BASE_DIR= str ,partition=[]):
-        from movie.api.call import gen_url,call_api,list2df,save_df,list2df_check_num
+    def common_get_data(ds_nodash ,url_param={},BASE_DIR= "/home/jacob/data/movies/dailyboxoffice",partition=['dt']):
+        from movie.api.call import gen_url,call_api,list2df,save_df
         data=call_api(ds_nodash,url_param)
         df=list2df(data,ds_nodash)
-        sv=save_df(df,BASE_DIR,['dt'])
-        return sv
+        sv=save_df(df,BASE_DIR,partition)
         #print(ds_nodash,url_param,partition)
     
     multi_y = PythonVirtualenvOperator(
         task_id='multi.y',
-        python_callable=common_get_data(ds_nodash,url_param),
+        python_callable=common_get_data,
         system_site_packages=False,
         requirements=REQUIREMENTS,
-        op_kwargs={"url_param":{"multiMovieYn":"Y"},"ds_nodash":"{{ data_interval_start.in_tz('Asia/Seoul').strftime('%Y%m%d') }}"}
+        op_kwargs={"url_param":{"multiMovieYn":"Y"},"ds_nodash":"{{ds_nodash}}"}
     )
 
     multi_n = PythonVirtualenvOperator(
@@ -74,7 +74,7 @@ with DAG(
         python_callable=common_get_data,
         system_site_packages=False,
         requirements=REQUIREMENTS,
-        op_kwargs={"url_param":{"multiMovieYn":"N"},"ds_nodash":"{{ data_interval_start.in_tz('Asia/Seoul').strftime('%Y%m%d') }}"}
+        op_kwargs={"url_param":{"multiMovieYn":"N"},"ds_nodash":"{{ds_nodash}}"}
     )
 
     nation_k = PythonVirtualenvOperator(
@@ -82,7 +82,7 @@ with DAG(
         python_callable=common_get_data,
         system_site_packages=False,
         requirements=REQUIREMENTS,
-        op_kwargs={"url_param":{"repNationCd":"K"},"ds_nodash":"{{ data_interval_start.in_tz('Asia/Seoul').strftime('%Y%m%d') }}"}
+        op_kwargs={"url_param":{"repNationCd":"K"},"ds_nodash":"{{ds_nodash}}"}
     )
 
     nation_f = PythonVirtualenvOperator(
@@ -90,7 +90,7 @@ with DAG(
         python_callable=common_get_data,
         system_site_packages=False,
         requirements=REQUIREMENTS,
-        op_kwargs={"url_param":{"repNationCd":"F"},"ds_nodash":"{{ data_interval_start.in_tz('Asia/Seoul').strftime('%Y%m%d') }}"}
+        op_kwargs={"url_param":{"repNationCd":"F"},"ds_nodash":"{{ds_nodash}}"}
     )
     
     no_param = PythonVirtualenvOperator(
@@ -98,12 +98,13 @@ with DAG(
         python_callable=common_get_data,
         system_site_packages=False,
         requirements=REQUIREMENTS,
-        op_kwargs={"url_param":{},"ds_nodash":"{{ data_interval_start.in_tz('Asia/Seoul').strftime('%Y%m%d') }}"}
+        op_kwargs={"url_param":{},"ds_nodash":"{{ds_nodash}}"}
     )
 
     rm_dir = BashOperator(task_id='rm.dir',
-                          bash_command='rm -rf $BASE_DIR/dt={{ ds_nodash }}',
-                          env={'BASE_DIR': BASE_DIR})
+                          bash_command=f"bash rm -rf {BASE_DIR}+/dt={{ds_nodash}}"
+                         
+    )
 
     echo_task = BashOperator(
         task_id='echo.task',
