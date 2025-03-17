@@ -26,7 +26,7 @@ with DAG(
     catchup=True,
     tags=['api', 'movie'],
 ) as dag:
-    REQUIREMENTS =["git+https://github.com/Jacob-53/movie.git@0.3.6"]
+    REQUIREMENTS =["git+https://github.com/Jacob-53/movie.git@0.3.7"]
     BASE_DIR = "/home/jacob/data/movies/dailyboxoffice"
 
     def branch_fun(ds_nodash):
