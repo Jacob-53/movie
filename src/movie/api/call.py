@@ -41,7 +41,6 @@ def list2df(data:list, date: str,url_param={}):
 def save_df(df: pd.DataFrame, base_path : str,partitions=['dt'],url_param={}):
     
     save_path = f"{base_path}"
-    df.to_parquet(base_path,partition_cols=partitions)
     for i in partitions:
         save_path= save_path + f"/{i}={df[i][0]}"
     
