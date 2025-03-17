@@ -26,13 +26,25 @@ def call_api(dt="20120101",url_param={}):
         return f"API 요청실패{e}"
     
     
-def list2df(data:list, date: str):
+def list2df(data:list, date: str,url_params={}):
     df= pd.DataFrame(data)
-    df["dt"]=date   
+    df["dt"]=date
+    #df["multiMovieYn"]="Y"
+    for k,v in url_params.items():
+        df[k] = v
+        
+    num_col=["rnum","rank","rankInten","movieCd","salesAmt","salesShare","salesInten","salesChange","salesAcc","audiCnt","audiInten","audiChange","audiAcc","scrnCnt","showCnt"]
+    df[num_col]=df[num_col].apply(pd.to_numeric)
+       
     return df
 
-def save_df(df: pd.DataFrame, base_path : str,partition=['dt']):
-    # if not os.path.exists(path): 
+def save_df(df: pd.DataFrame, base_path : str,partitions=['dt']):
+    df.to_parquet(base_path,partition_cols=partitions)
+    save_path = f"{base_path}"
+    for i in partitions:
+        save_path= save_path + f"/{i}={df[i][0]}"
+    return save_path
+  # if not os.path.exists(path): 
     #     os.makedirs(path)
     #     print(f"폴더 생성됨: {path}")
     
@@ -41,10 +53,6 @@ def save_df(df: pd.DataFrame, base_path : str,partition=['dt']):
     # sdf=data.to_csv(f"{path}/df.csv",index=False)
     
     # return sdf
-    df.to_parquet(base_path,partition_cols=partition)
-    save_path = f"{base_path}/dt={df['dt'][0]}"
-    return save_path
-
 
 def list2df_check_num():
     a= call_api("20250316",url_param={})

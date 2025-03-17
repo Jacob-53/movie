@@ -41,6 +41,7 @@ def test_save_df():
     base_path = "~/temp/movie"
     r = save_df(df, base_path)
     assert r == f"{base_path}/dt={ymd}"
+    print("save_path", r)
     read_df = pd.read_parquet(r)
     assert 'dt' not in read_df.columns
     assert 'dt' in pd.read_parquet(base_path).columns
@@ -58,11 +59,28 @@ def test_list2df_check_num():
     for i in num_col:
         assert a[i].dtype in ['int','float64'], f"{i}가  숫자가 아님"
         
-def test_common_get_data(ds_nodash="20240101",url_param={},BASE_DIR= str,partition=['dt']):
-    from movie.api.call import gen_url,call_api,list2df,save_df,list2df_check_num
+def test_common_get_data(ds_nodash="20240101",url_param={},BASE_DIR= str,partitions=['dt']):
+    from movie.api.call import call_api,list2df,save_df
     import os
     url_param={"url_param":{"multiMovieYn":"Y"}}
     data=call_api(ds_nodash,url_param)
     df=list2df(data,ds_nodash)
-    sv=save_df(df,"~/data/movies/dailyboxoffice",partition=['dt'])
+    sv=save_df(df,"~/data/movies/dailyboxoffice",partitions=['dt'])
     assert os.path.expanduser("~/data/movies/dailyboxoffice/dt=20240101")
+    
+    
+    
+def test_save_df_url_parmas():
+    ymd = "20210101"
+    url_params={"multiMovieYn":"Y"}
+    data = call_api(dt=ymd,url_param=url_params)
+    df = list2df(data, ymd,url_params)
+    base_path = "~/temp/movie"
+    partition= ['dt'] + list(url_params.keys())
+    #r = save_df(df, base_path,['dt','multiMovieYn'])
+    #r = save_df(df, base_path,['dt'] + list(url_params.keys()))
+    r = save_df(df, base_path,partition)
+    assert r == f"{base_path}/dt={ymd}/multiMovieYn=Y"
+    read_df = pd.read_parquet(r)
+    assert 'dt' not in read_df.columns
+    assert 'dt' in pd.read_parquet(base_path).columns

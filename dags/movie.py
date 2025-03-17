@@ -22,11 +22,11 @@ with DAG(
     description='movie',
     schedule="10 10 * * *",
     start_date=datetime(2024, 1, 1),
-    end_date=datetime(2024, 12, 31),
+    end_date=datetime(2024, 1, 31),
     catchup=True,
     tags=['api', 'movie'],
 ) as dag:
-    REQUIREMENTS =["git+https://github.com/Jacob-53/movie.git@0.2.0"]
+    REQUIREMENTS =["git+https://github.com/Jacob-53/movie.git@0.3.0"]
     BASE_DIR = "/home/jacob/data/movies/dailyboxoffice"
 
     def branch_fun(ds_nodash):
@@ -54,11 +54,12 @@ with DAG(
         requirements=REQUIREMENTS,
     )
 
-    def common_get_data(ds_nodash ,url_param={},BASE_DIR= "/home/jacob/data/movies/dailyboxoffice",partition=['dt']):
-        from movie.api.call import gen_url,call_api,list2df,save_df
+    def common_get_data(ds_nodash ,url_param={},BASE_DIR= "/home/jacob/data/movies/dailyboxoffice",partitions=['dt']):
+        from movie.api.call import call_api,list2df,save_df
         data=call_api(ds_nodash,url_param)
-        df=list2df(data,ds_nodash)
-        sv=save_df(df,BASE_DIR,partition)
+        df=list2df(data,ds_nodash,url_param)
+        sv=save_df(df,BASE_DIR,partitions)
+        return sv
         #print(ds_nodash,url_param,partition)
     
     multi_y = PythonVirtualenvOperator(
