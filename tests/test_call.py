@@ -87,9 +87,9 @@ def test_save_df_url_parmas():
     #r = save_df(df, base_path,['dt'] + list(url_param.keys()))
     r = save_df(df, base_path,partitions=['dt'],url_param={"multiMovieYn":"Y"})
     assert r == f"{base_path}/dt={ymd}/multiMovieYn=Y"
-    #read_df = pd.read_parquet(r)
-    # assert 'dt' not in read_df.columns
-    # assert 'dt' in pd.read_parquet(base_path).columns
+    read_df = pd.read_parquet(r)
+    assert 'dt' not in read_df.columns
+    assert 'dt' in pd.read_parquet(base_path).columns
     
 
 
