@@ -96,6 +96,11 @@ def test_save_df_url_parmas():
     assert 'dt' not in read_df.columns
     assert 'dt' in pd.read_parquet(base_path).columns
     
-
+def test_merge_df():
+    base_path="/home/jacob/data/movies/dailyboxoffice"
+    ds_nodash="20240101"
+    df=pd.read_parquet(f"{base_path}/dt={ds_nodash}")
+    df=df.drop(columns=['rnum', 'rank', 'rankInten', 'salesShare'])
+    assert len(df) == 50
 
         
