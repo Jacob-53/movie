@@ -38,16 +38,25 @@ def list2df(data:list, date: str,url_param={}):
        
     return df
 
-def save_df(df: pd.DataFrame, base_path : str,partitions=['dt'],url_param={}):
-    
-    save_path = f"{base_path}"
-    for i in partitions:
-        save_path= save_path + f"/{i}={df[i][0]}"
-    
-    for k, v in url_param.items():
-        save_path=save_path+f"/{k}={v}"
-    df.to_parquet(save_path,partition_cols=partitions)
+def save_df(df, base_path):
+    df.to_parquet(base_path, partition_cols=['dt'])
+    save_path = f"{base_path}/dt={df['dt'][0]}"
     return save_path
+
+
+
+
+
+# def save_df(df: pd.DataFrame, base_path : str,partitions=['dt'],url_param={}):
+    
+#     save_path = f"{base_path}"
+#     for i in partitions:
+#         save_path= save_path + f"/{i}={df[i][0]}"
+    
+#     for k, v in url_param.items():
+#         save_path=save_path+f"/{k}={v}"
+#     df.to_parquet(save_path,partition_cols=partitions)
+#     return save_path
 
   # if not os.path.exists(path): 
     #     os.makedirs(path)
