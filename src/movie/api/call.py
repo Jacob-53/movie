@@ -57,7 +57,8 @@ def save_df(df: pd.DataFrame, base_path : str, partitions=['dt']):
     return save_path
 
 def merge_df(ds_nodash,base_path):
-    df=pd.read_parquet(base_path/f"dt={ds_nodash}")
+    save_path=f"{base_path}/dt={ds_nodash}/merged.parquet"
+    df=pd.read_parquet(f"{base_path}/dt={ds_nodash}")
     df=df.drop(columns=['rnum', 'rank', 'rankInten', 'salesShare'])
     fil_movieCd=[]
     for _, row in df.iterrows():
@@ -82,7 +83,8 @@ def merge_df(ds_nodash,base_path):
                         })
         merged_list.append(merged_adf)
     f_merged_df = pd.concat(merged_list, ignore_index=True)
-    f_merged_df
+    f_merged_df[['multiMovieYn', 'repNationCd']] = f_merged_df[['multiMovieYn', 'repNationCd']].replace('', pd.NA)
+    f_merged_df.to_parquet(save_path)
 
 
 
