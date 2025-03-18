@@ -3,9 +3,8 @@ import requests
 import pandas as pd
 
 
-
 BASE_URL = "http://kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchDailyBoxOfficeList.json"
-KEY=os.getenv("MOVIE_KEY")
+KEY = os.getenv("MOVIE_KEY")
 
 def gen_url(dt="20120101",url_param={}):
     #key=",".join(url_param.keys())
@@ -17,7 +16,7 @@ def gen_url(dt="20120101",url_param={}):
 
 def call_api(dt="20120101",url_param={}):
     try:
-        res = requests.get(gen_url(dt,url_param))
+        res = requests.get(gen_url(dt, url_param))
         data = res.json()
         if res.status_code == 200:
             a = data["boxOfficeResult"]["dailyBoxOfficeList"]
@@ -38,25 +37,22 @@ def list2df(data:list, date: str,url_param={}):
        
     return df
 
-def save_df(df, base_path):
-    df.to_parquet(base_path, partition_cols=['dt'])
-    save_path = f"{base_path}/dt={df['dt'][0]}"
-    return save_path
-
-
-
-
-
-# def save_df(df: pd.DataFrame, base_path : str,partitions=['dt'],url_param={}):
-    
-#     save_path = f"{base_path}"
-#     for i in partitions:
-#         save_path= save_path + f"/{i}={df[i][0]}"
-    
-#     for k, v in url_param.items():
-#         save_path=save_path+f"/{k}={v}"
-#     df.to_parquet(save_path,partition_cols=partitions)
+# def save_df(df, base_path,partitions):
+#     df.to_parquet(base_path, partition_cols=['dt'])
+#     save_path = f"{base_path}/dt={df['dt'][0]}"
 #     return save_path
+
+
+
+def save_df(df: pd.DataFrame, base_path : str, partitions=['dt']):
+    
+    df.to_parquet(base_path, partition_cols=partitions)
+    
+    save_path = f"{base_path}"
+    for i in partitions:
+        save_path= save_path + f"/{i}={df[i][0]}"
+        
+    return save_path
 
   # if not os.path.exists(path): 
     #     os.makedirs(path)
