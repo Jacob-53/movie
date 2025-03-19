@@ -95,7 +95,7 @@ def merge_df(ds_nodash,base_path):
     save_dir = os.path.dirname(save_path)
     os.makedirs(save_dir, exist_ok=True)
     unique_df_sorted.to_parquet(save_path)
-
+    return save_path
 
 
 
