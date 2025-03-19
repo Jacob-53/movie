@@ -92,6 +92,8 @@ def merge_df(ds_nodash,base_path):
     f_merged_df['rank'] =f_merged_df['audiCnt'].rank(ascending=False,method='dense')
     unique_df_sorted = f_merged_df.sort_values(by='rank')
     unique_df_sorted[['multiMovieYn', 'repNationCd']] = unique_df_sorted[['multiMovieYn', 'repNationCd']].replace('', pd.NA)
+    save_dir = os.path.dirname(save_path)
+    os.makedirs(save_dir, exist_ok=True)
     unique_df_sorted.to_parquet(save_path)
 
 

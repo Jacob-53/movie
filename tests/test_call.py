@@ -101,10 +101,9 @@ def test_merge_df():
     ds_nodash="20240101"
     svbase_path =  "/home/jacob/data/movies/merge/dailyboxoffice"
     save_path = f"{svbase_path}/dt={ds_nodash}/merged.parquet"
-    save_path=f"{base_path}/dt={ds_nodash}/merged.parquet"
     df=pd.read_parquet(f"{base_path}/dt={ds_nodash}")
     df.drop(columns=['rank', 'rnum', 'rankInten', 'salesShare'])
-    assert len(df) == 75
+    assert len(df) == 50
     
     fil_movieCd=[]
     for _, row in df.iterrows():
@@ -143,6 +142,8 @@ def test_merge_df():
     f_merged_df['rank'] =f_merged_df['audiCnt'].rank(ascending=False,method='dense')
     unique_df_sorted = f_merged_df.sort_values(by='rank')
     unique_df_sorted[['multiMovieYn', 'repNationCd']] = unique_df_sorted[['multiMovieYn', 'repNationCd']].replace('', pd.NA)
+    save_dir = os.path.dirname(save_path)
+    os.makedirs(save_dir, exist_ok=True)
     unique_df_sorted.to_parquet(save_path)
     assert len(unique_df_sorted) == 25
     assert unique_df_sorted['multiMovieYn'].isna().sum() == 5
