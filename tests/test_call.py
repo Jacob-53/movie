@@ -96,6 +96,42 @@ def test_save_df_url_parmas():
     assert 'dt' not in read_df.columns
     assert 'dt' in pd.read_parquet(base_path).columns
     
+def test_merge_df():
+    base_path="/home/jacob/data/movies/dailyboxoffice"
+    ds_nodash="20240101"
+    save_path=f"{base_path}/dt={ds_nodash}/merged.parquet"
+    df=pd.read_parquet(f"{base_path}/dt={ds_nodash}")
+    df=df.drop(columns=['rnum', 'rank', 'rankInten', 'salesShare'])
+    assert len(df) == 50
+    
+    fil_movieCd=[]
+    for _, row in df.iterrows():
+        if pd.isna(row['multiMovieYn']) or pd.isna(row['repNationCd']):
+            fil_movieCd.append(row['movieCd'])
+    
+    def merge_values(series):
+        return ', '.join(series.dropna().astype(str).unique())
 
+    merged_list=[]    
 
+    for i in set(fil_movieCd):
+        fil_dup=df[df['movieCd'] == i][['movieCd', 'movieNm', 'multiMovieYn', 'repNationCd']]
+        if len(fil_dup) == 1 and fil_dup[['multiMovieYn', 'repNationCd']].isna().all(axis=1).iloc[0]:
+            fil_dup = fil_dup.fillna("Unclassified")
+            merged_list.append(fil_dup)
+        else:
+            fil_dup=fil_dup.dropna(subset=['multiMovieYn', 'repNationCd'], how='all')
+            merged_adf = fil_dup.groupby(['movieCd', 'movieNm'], as_index=False).agg({
+                        'multiMovieYn': merge_values,
+                        'repNationCd': merge_values
+                        })
+        merged_list.append(merged_adf)
+    f_merged_df = pd.concat(merged_list, ignore_index=True)
+    f_merged_df[['multiMovieYn', 'repNationCd']] = f_merged_df[['multiMovieYn', 'repNationCd']].replace('', pd.NA)
+    f_merged_df.to_parquet(save_path)
+    assert f_merged_df['multiMovieYn'].isna().sum() == 5
+    assert f_merged_df['repNationCd'].isna().sum() == 5
+    assert not f_merged_df[['multiMovieYn', 'repNationCd']].isna().all(axis=1).all()
+    assert os.path.exists(save_path)
+    
         

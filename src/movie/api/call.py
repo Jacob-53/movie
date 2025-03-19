@@ -32,7 +32,9 @@ def list2df(data:list, date: str,url_param={}):
     for k,v in url_param.items():
         df[k] = v
         
-    num_col=["rnum","rank","rankInten","movieCd","salesAmt","salesShare","salesInten","salesChange","salesAcc","audiCnt","audiInten","audiChange","audiAcc","scrnCnt","showCnt"]
+    num_col=['rnum', 'rank', 'rankInten', 'salesAmt', 'audiCnt',
+                'audiAcc', 'scrnCnt', 'showCnt', 'salesShare', 'salesInten',
+                'salesChange', 'audiInten', 'audiChange']
     df[num_col]=df[num_col].apply(pd.to_numeric)
        
     return df
@@ -53,6 +55,41 @@ def save_df(df: pd.DataFrame, base_path : str, partitions=['dt']):
         save_path= save_path + f"/{i}={df[i][0]}"
         
     return save_path
+
+def merge_df(ds_nodash,base_path):
+    save_path=f"{base_path}/dt={ds_nodash}/merged.parquet"
+    df=pd.read_parquet(f"{base_path}/dt={ds_nodash}")
+    df=df.drop(columns=['rnum', 'rank', 'rankInten', 'salesShare'])
+    fil_movieCd=[]
+    for _, row in df.iterrows():
+        if pd.isna(row['multiMovieYn']) or pd.isna(row['repNationCd']):
+            fil_movieCd.append(row['movieCd'])
+    
+    def merge_values(series):
+        return ', '.join(series.dropna().astype(str).unique())
+
+    merged_list=[]    
+
+    for i in set(fil_movieCd):
+        fil_dup=df[df['movieCd'] == i][['movieCd', 'movieNm', 'multiMovieYn', 'repNationCd']]
+        if len(fil_dup) == 1 and fil_dup[['multiMovieYn', 'repNationCd']].isna().all(axis=1).iloc[0]:
+            fil_dup = fil_dup.fillna("Unclassified")
+            merged_list.append(fil_dup)
+        else:
+            fil_dup=fil_dup.dropna(subset=['multiMovieYn', 'repNationCd'], how='all')
+            merged_adf = fil_dup.groupby(['movieCd', 'movieNm'], as_index=False).agg({
+                        'multiMovieYn': merge_values,
+                        'repNationCd': merge_values
+                        })
+        merged_list.append(merged_adf)
+    f_merged_df = pd.concat(merged_list, ignore_index=True)
+    f_merged_df[['multiMovieYn', 'repNationCd']] = f_merged_df[['multiMovieYn', 'repNationCd']].replace('', pd.NA)
+    f_merged_df.to_parquet(save_path)
+
+
+
+
+
 
   # if not os.path.exists(path): 
     #     os.makedirs(path)
