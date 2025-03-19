@@ -99,12 +99,23 @@ def test_save_df_url_parmas():
 def test_merge_df():
     base_path="/home/jacob/data/movies/dailyboxoffice"
     ds_nodash="20240101"
+    svbase_path =  "/home/jacob/data/movies/merge/dailyboxoffice"
+    save_path = f"{svbase_path}/dt={ds_nodash}/merged.parquet"
     save_path=f"{base_path}/dt={ds_nodash}/merged.parquet"
     df=pd.read_parquet(f"{base_path}/dt={ds_nodash}")
-    df=df.drop(columns=['rnum', 'rank', 'rankInten', 'salesShare'])
-    assert len(df) == 50
+    df.drop(columns=['rank', 'rnum', 'rankInten', 'salesShare'])
+    assert len(df) == 75
     
     fil_movieCd=[]
+    for _, row in df.iterrows():
+        if pd.isna(row['multiMovieYn']) or pd.isna(row['repNationCd']):
+            fil_movieCd.append(row['movieCd'])
+    
+    def merge_values(series):
+        return ', '.join(series.dropna().astype(str).unique())
+
+    fil_movieCd=[]
+    
     for _, row in df.iterrows():
         if pd.isna(row['multiMovieYn']) or pd.isna(row['repNationCd']):
             fil_movieCd.append(row['movieCd'])
@@ -115,23 +126,29 @@ def test_merge_df():
     merged_list=[]    
 
     for i in set(fil_movieCd):
-        fil_dup=df[df['movieCd'] == i][['movieCd', 'movieNm', 'multiMovieYn', 'repNationCd']]
+        fil_dup=df[df['movieCd'] == i][['movieCd', 'movieNm', 'multiMovieYn', 'repNationCd','audiCnt','rnum']]
         if len(fil_dup) == 1 and fil_dup[['multiMovieYn', 'repNationCd']].isna().all(axis=1).iloc[0]:
             fil_dup = fil_dup.fillna("Unclassified")
             merged_list.append(fil_dup)
         else:
             fil_dup=fil_dup.dropna(subset=['multiMovieYn', 'repNationCd'], how='all')
-            merged_adf = fil_dup.groupby(['movieCd', 'movieNm'], as_index=False).agg({
+            merged_df = fil_dup.groupby(['movieCd', 'movieNm'], as_index=False).agg({
                         'multiMovieYn': merge_values,
-                        'repNationCd': merge_values
+                        'repNationCd': merge_values,
+                        'audiCnt': 'max'
                         })
-        merged_list.append(merged_adf)
+        merged_list.append(merged_df)
+        
     f_merged_df = pd.concat(merged_list, ignore_index=True)
-    f_merged_df[['multiMovieYn', 'repNationCd']] = f_merged_df[['multiMovieYn', 'repNationCd']].replace('', pd.NA)
-    f_merged_df.to_parquet(save_path)
-    assert f_merged_df['multiMovieYn'].isna().sum() == 5
-    assert f_merged_df['repNationCd'].isna().sum() == 5
-    assert not f_merged_df[['multiMovieYn', 'repNationCd']].isna().all(axis=1).all()
+    f_merged_df['rank'] =f_merged_df['audiCnt'].rank(ascending=False,method='dense')
+    unique_df_sorted = f_merged_df.sort_values(by='rank')
+    unique_df_sorted[['multiMovieYn', 'repNationCd']] = unique_df_sorted[['multiMovieYn', 'repNationCd']].replace('', pd.NA)
+    unique_df_sorted.to_parquet(save_path)
+    assert len(unique_df_sorted) == 25
+    assert unique_df_sorted['multiMovieYn'].isna().sum() == 5
+    assert unique_df_sorted['repNationCd'].isna().sum() == 5
+    assert not unique_df_sorted[['multiMovieYn', 'repNationCd']].isna().all(axis=1).all()
+    assert unique_df_sorted.iloc[0]['movieNm'] == '노량: 죽음의 바다'
     assert os.path.exists(save_path)
     
         
