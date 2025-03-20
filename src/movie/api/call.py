@@ -120,6 +120,25 @@ def gen_meta(ds_nodash,base_path,start_date):
     return f"{ds_nodash} gen meta 완료"
 
 
+def gen_movie(base_path,ds_nodash, partitions=[]):
+    read_path = f"{base_path}/meta/meta.parquet"
+    partitions = ['dt','multiMovieYn','repNationCd']
+    df=pd.read_parquet(read_path)
+    df['dt'] = ds_nodash
+    df[['multiMovieYn', 'repNationCd']] = df[['multiMovieYn', 'repNationCd']].replace('','Unclassified')
+    df[['multiMovieYn', 'repNationCd']] = df[['multiMovieYn', 'repNationCd']].fillna('Unclassified')
+    df[['multiMovieYn', 'repNationCd']] = df[['multiMovieYn', 'repNationCd']].astype(str)
+    df.to_parquet(f"{base_path}/dailyboxoffice", partition_cols = partitions)
+    return f"{partitions} 파티셔닝 완료"
+   
+    
+    
+     
+
+
+
+
+
   # if not os.path.exists(path): 
     #     os.makedirs(path)
     #     print(f"폴더 생성됨: {path}")

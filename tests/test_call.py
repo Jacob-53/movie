@@ -154,14 +154,14 @@ def test_merge_df():
     
     
 def test_gen_meta():
-    base_path = "/home/jacob/data/movie-after/meta"
+    base_path = "/home/jacob/data/movie-after"
     rbase_path = "/home/jacob/data/movies/merge/dailyboxoffice"
-    save_path = f"{base_path}/meta.parquet"
+    save_path = f"{base_path}/meta/meta.parquet"
     start_date = 20240101
-    ds_nodash = 20240102
+    ds_nodash = 20240101
     
-    if not os.path.exists(base_path):
-        os.makedirs(base_path)
+    if not os.path.exists(f"{base_path}/meta"):
+        os.makedirs(f"{base_path}/meta")
     else:
         pass
     
@@ -187,3 +187,23 @@ def test_gen_meta():
     bdf = pd.read_parquet(save_path)
     assert len(f_target_df) == len(bdf)
     
+    
+def test_gen_movie():
+    from movie.api.call import gen_movie
+    base_path = "/home/jacob/data/movie_after"
+    ds_nodash = 20240102
+    r = gen_movie(base_path,ds_nodash, partitions=[])
+    path_dict_1 = ['multiMovieYn','Y','repNationCd','K']
+    path_dict_2 = ['multiMovieYn','N','repNationCd','F']
+     
+    save_path = f"{base_path}/dailyboxoffice/dt={ds_nodash}"
+    save_path1= save_path + f"/{path_dict_1[0]}={path_dict_1[1]}"
+    save_path2= save_path + f"/{path_dict_2[0]}={path_dict_2[1]}"
+    assert os.path.isdir(save_path1), '1번에러'
+    assert os.path.isdir(save_path2),'print(save_path2)'
+
+    
+        
+    # read_df = pd.read_parquet(r)
+    # assert 'dt' not in read_df.columns
+    # assert 'dt' in pd.read_parquet(base_path).columns
