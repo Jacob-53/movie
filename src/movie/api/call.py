@@ -97,8 +97,27 @@ def merge_df(ds_nodash,base_path):
     unique_df_sorted.to_parquet(save_path)
     return save_path
 
-
-
+def gen_meta(ds_nodash,base_path,start_date):
+    rbase_path = "/home/jacob/data/movies/merge/dailyboxoffice"
+    save_path = f"{base_path}/meta/meta.parquet"
+    if not os.path.exists(f"{base_path}/meta"):
+        os.makedirs(f"{base_path}/meta")
+    else:
+        pass
+    
+    if start_date == ds_nodash:
+        df=pd.read_parquet(f"{rbase_path}/dt={ds_nodash}")
+        df.to_parquet(save_path)
+    else:
+        today_df = pd.read_parquet(f"{rbase_path}/dt={ds_nodash}")
+        target_df = pd.read_parquet(save_path)
+        target_df.set_index("movieCd",inplace=True)
+        today_df.set_index("movieCd",inplace=True)
+        f_target_df = target_df.combine_first(today_df)
+        f_target_df.reset_index(inplace=True)
+        f_target_df.to_parquet(save_path)
+        
+    return f"{ds_nodash} gen meta 완료"
 
 
   # if not os.path.exists(path): 

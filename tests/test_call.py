@@ -152,4 +152,38 @@ def test_merge_df():
     assert unique_df_sorted.iloc[0]['movieNm'] == '노량: 죽음의 바다'
     assert os.path.exists(save_path)
     
-        
+    
+def test_gen_meta():
+    base_path = "/home/jacob/data/movie-after/meta"
+    rbase_path = "/home/jacob/data/movies/merge/dailyboxoffice"
+    save_path = f"{base_path}/meta.parquet"
+    start_date = 20240101
+    ds_nodash = 20240102
+    
+    if not os.path.exists(base_path):
+        os.makedirs(base_path)
+    else:
+        pass
+    
+    if start_date == ds_nodash:
+        df=pd.read_parquet(f"{rbase_path}/dt={ds_nodash}")
+        df.to_parquet(save_path)
+   
+    # adf = pd.read_parquet(f"{rbase_path}/dt={ds_nodash}")
+    # bdf = pd.read_parquet(save_path)
+    
+    # assert len(adf) == len(bdf)
+    # assert adf.equals(bdf), "adf는 bdf 동일해야 합니다!"
+    
+    else:
+        today_df = pd.read_parquet(f"{rbase_path}/dt={ds_nodash}")
+        target_df = pd.read_parquet(save_path)
+        target_df.set_index("movieCd",inplace=True)
+        today_df.set_index("movieCd",inplace=True)
+        f_target_df = target_df.combine_first(today_df)
+        f_target_df.reset_index(inplace=True)
+        f_target_df.to_parquet(save_path)
+    
+    bdf = pd.read_parquet(save_path)
+    assert len(f_target_df) == len(bdf)
+    
