@@ -130,7 +130,7 @@ def gen_movie(base_path,ds_nodash, partitions=[]):
     # TODO source_df(50) + meta_path join 해서 50 row 를 df 를 만들고 unique 파일로 만든 메타 파켓을 참조하여서 새로운 movie 파티셔닝을 만드는작업임
     # 모양은 source_df 같아요. 그런데 source_df 는 dt 컬럼이 없어요. dt 칼럼 추가 meta_df['dt'] = ds_nodash
     gen_movie_df = meta_df.merge(source_df, on="movieCd", how="left", suffixes=("_meta", "_source"))
-    gen_movie_df['multiMovieYn'] = gen_movie_df['multiMovieYn_meta'].combine_first(gen_movie_df['multiMovieYn_meta_source'])
+    gen_movie_df['multiMovieYn'] = gen_movie_df['multiMovieYn_meta'].combine_first(gen_movie_df['multiMovieYn_source'])
     gen_movie_df['repNationCd'] = gen_movie_df['repNationCd_meta'].combine_first(gen_movie_df['repNationCd_source'])
     final_df = gen_movie_df[source_df.columns]
     final_df['dt'] = ds_nodash
