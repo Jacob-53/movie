@@ -121,14 +121,25 @@ def gen_meta(ds_nodash,base_path,start_date):
 
 
 def gen_movie(base_path,ds_nodash, partitions=[]):
-    read_path = f"{base_path}/meta/meta.parquet"
+    
+    source_df = pd.read_parquet(f'/home/jacob/data/movies/dailyboxoffice/dt={ds_nodash}')
+    
+    meta_path = f"{base_path}/meta/meta.parquet"
+    meta_df=pd.read_parquet(meta_path)
+    
+    # TODO source_df(50) + meta_path join 해서 50 row 를 df 를 만들고 unique 파일로 만든 메타 파켓을 참조하여서 새로운 movie 파티셔닝을 만드는작업임
+    # 모양은 source_df 같아요. 그런데 source_df 는 dt 컬럼이 없어요. dt 칼럼 추가 meta_df['dt'] = ds_nodash
+    gen_movie_df = meta_df.merge(source_df, on="movieCd", how="left", suffixes=("_meta", "_source"))
+    gen_movie_df['multiMovieYn'] = gen_movie_df['multiMovieYn_meta'].combine_first(gen_movie_df['multiMovieYn_meta_source'])
+    gen_movie_df['repNationCd'] = gen_movie_df['repNationCd_meta'].combine_first(gen_movie_df['repNationCd_source'])
+    final_df = gen_movie_df[source_df.columns]
+    final_df['dt'] = ds_nodash
+    final_df[['multiMovieYn', 'repNationCd']] = final_df[['multiMovieYn', 'repNationCd']].replace('','Unclassified')
+    final_df[['multiMovieYn', 'repNationCd']] = final_df[['multiMovieYn', 'repNationCd']].fillna('Unclassified')
+    final_df[['multiMovieYn', 'repNationCd']] = final_df[['multiMovieYn', 'repNationCd']].astype(str)
+    
     partitions = ['dt','multiMovieYn','repNationCd']
-    df=pd.read_parquet(read_path)
-    df['dt'] = ds_nodash
-    df[['multiMovieYn', 'repNationCd']] = df[['multiMovieYn', 'repNationCd']].replace('','Unclassified')
-    df[['multiMovieYn', 'repNationCd']] = df[['multiMovieYn', 'repNationCd']].fillna('Unclassified')
-    df[['multiMovieYn', 'repNationCd']] = df[['multiMovieYn', 'repNationCd']].astype(str)
-    df.to_parquet(f"{base_path}/dailyboxoffice", partition_cols = partitions)
+    final_df.to_parquet(f"{base_path}/dailyboxoffice", partition_cols = partitions)
     return f"{partitions} 파티셔닝 완료"
    
     
