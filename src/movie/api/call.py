@@ -32,7 +32,9 @@ def list2df(data:list, date: str,url_param={}):
     for k,v in url_param.items():
         df[k] = v
         
-    num_col=["rnum","rank","rankInten","movieCd","salesAmt","salesShare","salesInten","salesChange","salesAcc","audiCnt","audiInten","audiChange","audiAcc","scrnCnt","showCnt"]
+    num_col=['rnum', 'rank', 'rankInten', 'salesAmt', 'audiCnt',
+                'audiAcc', 'scrnCnt', 'showCnt', 'salesShare', 'salesInten',
+                'salesChange', 'audiInten', 'audiChange']
     df[num_col]=df[num_col].apply(pd.to_numeric)
        
     return df
@@ -53,6 +55,104 @@ def save_df(df: pd.DataFrame, base_path : str, partitions=['dt']):
         save_path= save_path + f"/{i}={df[i][0]}"
         
     return save_path
+
+def merge_df(ds_nodash,base_path):
+    svbase_path =  "/home/jacob/data/movies/merge/dailyboxoffice"
+    save_path = f"{svbase_path}/dt={ds_nodash}/merged.parquet"
+        
+    df=pd.read_parquet(f"{base_path}/dt={ds_nodash}")
+    df.drop(columns=['rank', 'rnum', 'rankInten', 'salesShare'])
+    
+    fil_movieCd=[]
+    
+    for _, row in df.iterrows():
+        if pd.isna(row['multiMovieYn']) or pd.isna(row['repNationCd']):
+            fil_movieCd.append(row['movieCd'])
+    
+    def merge_values(series):
+        return ', '.join(series.dropna().astype(str).unique())
+
+    merged_list=[]    
+
+    for i in set(fil_movieCd):
+        fil_dup=df[df['movieCd'] == i][['movieCd', 'movieNm', 'multiMovieYn', 'repNationCd','audiCnt','rnum']]
+        if len(fil_dup) == 1 and fil_dup[['multiMovieYn', 'repNationCd']].isna().all(axis=1).iloc[0]:
+            fil_dup = fil_dup.fillna("Unclassified")
+            merged_list.append(fil_dup)
+        else:
+            fil_dup=fil_dup.dropna(subset=['multiMovieYn', 'repNationCd'], how='all')
+            merged_df = fil_dup.groupby(['movieCd', 'movieNm'], as_index=False).agg({
+                        'multiMovieYn': merge_values,
+                        'repNationCd': merge_values,
+                        'audiCnt': 'max'
+                        })
+        merged_list.append(merged_df)
+        
+    f_merged_df = pd.concat(merged_list, ignore_index=True)
+    f_merged_df['rank'] =f_merged_df['audiCnt'].rank(ascending=False,method='dense')
+    unique_df_sorted = f_merged_df.sort_values(by='rank')
+    unique_df_sorted[['multiMovieYn', 'repNationCd']] = unique_df_sorted[['multiMovieYn', 'repNationCd']].replace('', pd.NA)
+    save_dir = os.path.dirname(save_path)
+    os.makedirs(save_dir, exist_ok=True)
+    unique_df_sorted.to_parquet(save_path)
+    return save_path
+
+def gen_meta(ds_nodash,base_path,start_date):
+    rbase_path = "/home/jacob/data/movies/merge/dailyboxoffice"
+    save_path = f"{base_path}/meta/meta.parquet"
+    if not os.path.exists(f"{base_path}/meta"):
+        os.makedirs(f"{base_path}/meta")
+    else:
+        pass
+    
+    if start_date == ds_nodash:
+        df=pd.read_parquet(f"{rbase_path}/dt={ds_nodash}")
+        df.to_parquet(save_path)
+    else:
+        today_df = pd.read_parquet(f"{rbase_path}/dt={ds_nodash}")
+        target_df = pd.read_parquet(save_path)
+        target_df.set_index("movieCd",inplace=True)
+        today_df.set_index("movieCd",inplace=True)
+        f_target_df = target_df.combine_first(today_df)
+        f_target_df.reset_index(inplace=True)
+        f_target_df.to_parquet(save_path)
+        
+    return f"{ds_nodash} gen meta 완료"
+
+
+def gen_movie(base_path,ds_nodash, partitions=[]):
+    
+    source_df = pd.read_parquet(f'/home/jacob/data/movies/dailyboxoffice/dt={ds_nodash}')
+    
+    meta_path = f"{base_path}/meta/meta.parquet"
+    meta_df=pd.read_parquet(meta_path)
+    
+    # TODO source_df(50) + meta_path join 해서 50 row 를 df 를 만들고 unique 파일로 만든 메타 파켓을 참조하여서 새로운 movie 파티셔닝을 만드는작업임
+    # 모양은 source_df 같아요. 그런데 source_df 는 dt 컬럼이 없어요. dt 칼럼 추가 (meta_df['dt'] = ds_nodash)
+    gen_movie_df = source_df.merge(meta_df, on="movieCd", how="left", suffixes=("_meta", "_source"))
+    gen_movie_df["multiMovieYn"] = gen_movie_df["multiMovieYn_meta"].combine_first(gen_movie_df["multiMovieYn_source"])
+    gen_movie_df["repNationCd"] = gen_movie_df["repNationCd_meta"].combine_first(gen_movie_df["repNationCd_source"])
+    gen_movie_df["rank"] = gen_movie_df["rank_meta"]
+    gen_movie_df["movieNm"] = gen_movie_df["movieNm_meta"]
+    gen_movie_df["audiCnt"] = gen_movie_df["audiCnt_meta"]
+    final_df = gen_movie_df[source_df.columns]
+    final_df["dt"] = ds_nodash
+
+    final_df[['multiMovieYn', 'repNationCd']] = final_df[['multiMovieYn', 'repNationCd']].replace('','Unclassified')
+    final_df[['multiMovieYn', 'repNationCd']] = final_df[['multiMovieYn', 'repNationCd']].fillna('Unclassified')
+    final_df[['multiMovieYn', 'repNationCd']] = final_df[['multiMovieYn', 'repNationCd']].astype(str)
+    
+    partitions = ['dt','multiMovieYn','repNationCd']
+    final_df.to_parquet(f"{base_path}/dailyboxoffice", partition_cols = partitions)
+    return f"{partitions} 파티셔닝 완료"
+   
+    
+    
+     
+
+
+
+
 
   # if not os.path.exists(path): 
     #     os.makedirs(path)

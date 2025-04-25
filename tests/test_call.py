@@ -96,6 +96,114 @@ def test_save_df_url_parmas():
     assert 'dt' not in read_df.columns
     assert 'dt' in pd.read_parquet(base_path).columns
     
+def test_merge_df():
+    base_path="/home/jacob/data/movies/dailyboxoffice"
+    ds_nodash="20240101"
+    svbase_path =  "/home/jacob/data/movies/merge/dailyboxoffice"
+    save_path = f"{svbase_path}/dt={ds_nodash}/merged.parquet"
+    df=pd.read_parquet(f"{base_path}/dt={ds_nodash}")
+    df.drop(columns=['rank', 'rnum', 'rankInten', 'salesShare'])
+    assert len(df) == 50
+    
+    fil_movieCd=[]
+    for _, row in df.iterrows():
+        if pd.isna(row['multiMovieYn']) or pd.isna(row['repNationCd']):
+            fil_movieCd.append(row['movieCd'])
+    
+    def merge_values(series):
+        return ', '.join(series.dropna().astype(str).unique())
 
+    fil_movieCd=[]
+    
+    for _, row in df.iterrows():
+        if pd.isna(row['multiMovieYn']) or pd.isna(row['repNationCd']):
+            fil_movieCd.append(row['movieCd'])
+    
+    def merge_values(series):
+        return ', '.join(series.dropna().astype(str).unique())
 
+    merged_list=[]    
+
+    for i in set(fil_movieCd):
+        fil_dup=df[df['movieCd'] == i][['movieCd', 'movieNm', 'multiMovieYn', 'repNationCd','audiCnt','rnum']]
+        if len(fil_dup) == 1 and fil_dup[['multiMovieYn', 'repNationCd']].isna().all(axis=1).iloc[0]:
+            fil_dup = fil_dup.fillna("Unclassified")
+            merged_list.append(fil_dup)
+        else:
+            fil_dup=fil_dup.dropna(subset=['multiMovieYn', 'repNationCd'], how='all')
+            merged_df = fil_dup.groupby(['movieCd', 'movieNm'], as_index=False).agg({
+                        'multiMovieYn': merge_values,
+                        'repNationCd': merge_values,
+                        'audiCnt': 'max'
+                        })
+        merged_list.append(merged_df)
         
+    f_merged_df = pd.concat(merged_list, ignore_index=True)
+    f_merged_df['rank'] =f_merged_df['audiCnt'].rank(ascending=False,method='dense')
+    unique_df_sorted = f_merged_df.sort_values(by='rank')
+    unique_df_sorted[['multiMovieYn', 'repNationCd']] = unique_df_sorted[['multiMovieYn', 'repNationCd']].replace('', pd.NA)
+    save_dir = os.path.dirname(save_path)
+    os.makedirs(save_dir, exist_ok=True)
+    unique_df_sorted.to_parquet(save_path)
+    assert len(unique_df_sorted) == 25
+    assert unique_df_sorted['multiMovieYn'].isna().sum() == 5
+    assert unique_df_sorted['repNationCd'].isna().sum() == 5
+    assert not unique_df_sorted[['multiMovieYn', 'repNationCd']].isna().all(axis=1).all()
+    assert unique_df_sorted.iloc[0]['movieNm'] == '노량: 죽음의 바다'
+    assert os.path.exists(save_path)
+    
+    
+def test_gen_meta():
+    base_path = "/home/jacob/data/movie-after"
+    rbase_path = "/home/jacob/data/movies/merge/dailyboxoffice"
+    save_path = f"{base_path}/meta/meta.parquet"
+    start_date = 20240101
+    ds_nodash = 20240101
+    
+    if not os.path.exists(f"{base_path}/meta"):
+        os.makedirs(f"{base_path}/meta")
+    else:
+        pass
+    
+    if start_date == ds_nodash:
+        df=pd.read_parquet(f"{rbase_path}/dt={ds_nodash}")
+        df.to_parquet(save_path)
+   
+    # adf = pd.read_parquet(f"{rbase_path}/dt={ds_nodash}")
+    # bdf = pd.read_parquet(save_path)
+    
+    # assert len(adf) == len(bdf)
+    # assert adf.equals(bdf), "adf는 bdf 동일해야 합니다!"
+    
+    else:
+        today_df = pd.read_parquet(f"{rbase_path}/dt={ds_nodash}")
+        target_df = pd.read_parquet(save_path)
+        target_df.set_index("movieCd",inplace=True)
+        today_df.set_index("movieCd",inplace=True)
+        f_target_df = target_df.combine_first(today_df)
+        f_target_df.reset_index(inplace=True)
+        f_target_df.to_parquet(save_path)
+    
+    bdf = pd.read_parquet(save_path)
+    assert len(f_target_df) == len(bdf)
+    
+    
+def test_gen_movie():
+    from movie.api.call import gen_movie
+    base_path = "/home/jacob/data/movie_after"
+    ds_nodash = 20240102
+    r = gen_movie(base_path,ds_nodash, partitions=[])
+    path_dict_1 = ['multiMovieYn','Y','repNationCd','K']
+    path_dict_2 = ['multiMovieYn','N','repNationCd','F']
+     
+    save_path = f"{base_path}/dailyboxoffice/dt={ds_nodash}"
+    save_path1= save_path + f"/{path_dict_1[0]}={path_dict_1[1]}"
+    save_path2= save_path + f"/{path_dict_2[0]}={path_dict_2[1]}"
+    assert os.path.isdir(save_path1), '1번에러'
+    assert os.path.isdir(save_path2),'print(save_path2)'
+
+    
+        
+    # read_df = pd.read_parquet(r)
+    # assert 'dt' not in read_df.columns
+    # assert 'dt' in pd.read_parquet(base_path).columns
